@@ -8,8 +8,86 @@
     <title>Three.JS-Webpack Boilerplate</title>
   </head>
   <body>
+    <script type="x-shader/x-vertex" id="physicsVertexShader">
+      attribute vec2 reference;
+      
+      uniform sampler2D texturePosition;
+      #include <fog_pars_vertex>
+
+      varying vec4 vColor;
+      //varying vec4 gl_Position;
+
+      void main(){
+          #include <begin_vertex>
+          #include <project_vertex>
+          
+          vec4 tmpPos = texture2D(texturePosition,reference);
+
+          //vColor = vec4(0.0,1.0,1.0,1.0);
+          float r = (tmpPos.x / 1000.0) + 0.5;
+          float g = (tmpPos.y / 1000.0) + 0.5;
+          float b = (tmpPos.z / 1000.0) + 0.5;
+          vColor = vec4(r,g,b,1.0);
+          
+          gl_Position=projectionMatrix * modelViewMatrix * tmpPos;
+          gl_PointSize=5.0;
+          
+          #include <fog_vertex>
+
+      }
+    </script>
+    <script type="x-shader/x-fragment" id="pointFragmentShader">
+        #include <fog_pars_fragment>
+        varying vec4 vColor;
+        void main(){
+            gl_FragColor=vColor;
+            #include <fog_fragment>
+        }
+    </script>
+
+
+    <script type="x-shader/x-fragment" id="fragmentShaderAcceleration">  
+      void main(){
+        vec2 uv = gl_FragCoord.xy / resolution.xy;
+        vec4 tmpPos = texture2D( texturePosition, uv );
+        float yAcc = -tmpPos.y / 8.0;
+        gl_FragColor = vec4(0.0,yAcc,0.0,1.0);
+
+      }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentShaderVelocity">  
+      uniform float deltaT;
+
+      void main(){
+        vec2 uv = gl_FragCoord.xy / resolution.xy;
+        vec4 tmpAcc = texture2D( textureAcceleration, uv );
+        vec4 tmpVel = texture2D( textureVelocity, uv);
+
+        float xVel = tmpVel.x + tmpAcc.x * 0.5 * deltaT;
+        float yVel = tmpVel.y + tmpAcc.y * 0.5 * deltaT;
+
+        gl_FragColor = vec4(xVel,yVel,0.0,1.0);
+      }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentShaderPosition">  
+      uniform float deltaT;
+
+      void main(){
+        vec2 uv = gl_FragCoord.xy / resolution.xy;
+        vec4 tmpVel = texture2D( textureVelocity, uv);
+        vec4 tmpPos = texture2D( texturePosition, uv);
+
+        float xPos = tmpPos.x + tmpVel.x * deltaT;
+        float yPos = tmpPos.y + tmpVel.y * deltaT;
+
+        gl_FragColor = vec4(xPos,yPos,0.0,1.0);
+      }
+    </script>
+
     <!-- Information modal -->
-    <a id="open-modal-btn" class="float">
+    <!--a id="open-modal-btn" class="float">
       <i class="icon-float material-icons">menu</i>
     </a>
     <div id="info-modal" class="modal">
@@ -20,7 +98,7 @@
         <p>To get started clone the repo <code>git clone https://github.com/aakatev/three-js-webpack.git</code>.</p>
         <p>For more information, navigate to the <a href="https://github.com/aakatev/three-js-webpack">project GitHub page</a>!</p>
       </div>
-    </div>
+    </div-->
     <!-- End information modal -->
 
     <script src="public/bundle.js"></script>

@@ -2,48 +2,38 @@ import * as THREE from 'three'
 import { WEBGL } from './webgl'
 //import './modal'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 if (WEBGL.isWebGLAvailable()) {
   var camera, scene, renderer, gpuCompute, geometry, positionVariable, velocityVariable, accelerationVariable,
-    positionUniforms, velocityUniforms, points,
+    positionUniforms, velocityUniforms, accelerationUniforms, points, controls,
     accelerationTextureIndex, velocityTextureIndex, positionTextureIndex;
 
-  var textureDim = 8;
+  var textureDim = 128;
   var nParticles = textureDim * textureDim;
 
-  //var particleScale = 400;
-  var particleStartX = -1200.0;
-  var particleYConst = 80.0;
+  var smoothingLength = 0.1;
+  var polytropicIndex = 1.0;
+  var equationOfStateConst = 0.1;
+  var particleMass = 2.0 / nParticles;
+  var lambda = 2.01203286;
+  var viscosity = 1.0;
 
-  var deltaT = 0.39269908;
+  var deltaT = 0.04;
 
   initScene();
   initGPU();
   initParticles();
 
-  //points.material.uniforms.texturePosition.value = gpuCompute.getAlternateRenderTarget( positionVariable ).texture;
-
-  /*computeAcceleration();
-
-  computeVelocity();
+  // compute position with zero velocity to get particle densities
   computePosition();
   computeAcceleration();
 
-  points.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
-  //console.log(points.material.uniforms.texturePosition.value.image);
-
-  render();*/
-
-  computeAcceleration();
-
-  //animate();
+  animate();
 
   //render();
-  //render();
 
-  //for (var a=0; a < 2; a++){
-  //  render();
-  //}
+
 
   function initScene() {
     camera = new THREE.PerspectiveCamera(
@@ -58,11 +48,16 @@ if (WEBGL.isWebGLAvailable()) {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050505);
     scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
+    //scene.fog = new THREE.Fog( 0x050505, 3000, 4000 );
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    //renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
+
+    //controls = new OrbitControls( camera, renderer.domElement );
+    //controls.update();
 
     window.addEventListener('resize', onWindowResize, false);
 
@@ -80,9 +75,9 @@ if (WEBGL.isWebGLAvailable()) {
     var posArray = dtPosition.image.data;
 
     for (var i=0; i < posArray.length; i+=4){
-      var x = particleStartX;
-      var y = particleStartX + particleYConst * (i / 4);
-      var z = 0;
+      var x = randNormal();
+      var y = randNormal();
+      var z = randNormal();
 
       posArray[i + 0] = x;
       posArray[i + 1] = y;
@@ -121,15 +116,25 @@ if (WEBGL.isWebGLAvailable()) {
     accelerationVariable = gpuCompute.addVariable("textureAcceleration",
         document.getElementById('fragmentShaderAcceleration').textContent, dtAcceleration);
 
-    gpuCompute.setVariableDependencies(accelerationVariable, [positionVariable]);
+    gpuCompute.setVariableDependencies(accelerationVariable, [positionVariable, velocityVariable]);
     gpuCompute.setVariableDependencies(velocityVariable, [velocityVariable, accelerationVariable]);
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
 
     positionUniforms = positionVariable.material.uniforms;
     positionUniforms.deltaT = {value: deltaT};
+    positionUniforms.smoothingLength = {value: smoothingLength};
+    positionUniforms.particleMass = {value: particleMass};
 
     velocityUniforms = velocityVariable.material.uniforms;
     velocityUniforms.deltaT = {value: deltaT};
+
+    accelerationUniforms = accelerationVariable.material.uniforms;
+    accelerationUniforms.equationOfStateConst = {value: equationOfStateConst};
+    accelerationUniforms.polytropicIndex = {value: polytropicIndex};
+    accelerationUniforms.smoothingLength = {value: smoothingLength};
+    accelerationUniforms.particleMass = {value: particleMass};
+    accelerationUniforms.lambda = {value: lambda};
+    accelerationUniforms.viscosity = {value: viscosity};
 
     var error = gpuCompute.init();
     if ( error !== null ) {
@@ -158,20 +163,27 @@ if (WEBGL.isWebGLAvailable()) {
 
     var material = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge( [
-        THREE.UniformsLib[ 'fog' ], { texturePosition: {value: null} }
+        THREE.UniformsLib[ 'fog' ], 
+        { texturePosition: {value: null}, 
+          scale: {value: 500.0} }
       ] ),
       vertexShader: document.getElementById('physicsVertexShader').textContent,
       fragmentShader: document.getElementById('pointFragmentShader').textContent,
       vertexColors: true,
-      fog: true
+      //fog: true
     });
 
-    //material.needsUpdate = true;
-
     points = new THREE.Points( geometry, material );
-    //points.matrixAutoUpdate = false;
-    //points.updateMatrix();
+    points.matrixAutoUpdate = false;
+    points.updateMatrix();
     scene.add( points );
+  }
+
+  function randNormal() {
+    var a = 0, b = 0;
+    while(a === 0) a = Math.random(); //Converting [0,1) to (0,1)
+    while(b === 0) b = Math.random();
+    return Math.sqrt( -2.0 * Math.log( a ) ) * Math.cos( 2.0 * Math.PI * b );
   }
 
   function onWindowResize() {
@@ -185,10 +197,10 @@ if (WEBGL.isWebGLAvailable()) {
     var uniforms = accelerationVariable.material.uniforms;
     var nextIdx = accelerationTextureIndex === 0 ? 1 : 0;
     uniforms['texturePosition'].value = positionVariable.renderTargets[ positionTextureIndex ].texture;
+    uniforms['textureVelocity'].value = velocityVariable.renderTargets[ velocityTextureIndex ].texture;
     var target = accelerationVariable.renderTargets[nextIdx];
     gpuCompute.doRenderTarget(accelerationVariable.material,target);
     accelerationTextureIndex = nextIdx;
-    //alert('hm...');
   }
 
   function computeVelocity(){
@@ -215,11 +227,11 @@ if (WEBGL.isWebGLAvailable()) {
 
   function animate(){
     requestAnimationFrame(animate);
+    //controls.update();
     render();
   }
 
   function render() {
-    //computeAcceleration();
 
     computeVelocity();
     computePosition();

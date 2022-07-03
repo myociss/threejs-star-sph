@@ -12,46 +12,118 @@
       attribute vec2 reference;
       
       uniform sampler2D texturePosition;
-      #include <fog_pars_vertex>
+      uniform float scale;
+      //#include <fog_pars_vertex>
 
       varying vec4 vColor;
-      //varying vec4 gl_Position;
 
       void main(){
-          #include <begin_vertex>
-          #include <project_vertex>
+          //#include <begin_vertex>
+          //#include <project_vertex>
           
+          //vec4 tmpPos = scale * texture2D(texturePosition,reference);
           vec4 tmpPos = texture2D(texturePosition,reference);
 
+          float tmpX = scale * tmpPos.x;
+          float tmpY = scale * tmpPos.y;
+          float tmpZ = scale * tmpPos.z;
+
+          float rho = tmpPos.a;
+
+          //float rho = min( (tmpPos.a - 3.0)/3.0, 1.0 );
+
           //vColor = vec4(0.0,1.0,1.0,1.0);
-          float r = (tmpPos.x / 1000.0) + 0.5;
-          float g = (tmpPos.y / 1000.0) + 0.5;
-          float b = (tmpPos.z / 1000.0) + 0.5;
-          vColor = vec4(r,g,b,1.0);
+
+          float r = (tmpX / scale) + 0.5;
+          float g = (tmpY / scale) + 0.5;
+          float b = (tmpZ / scale) + 0.5;
+          //vColor = vec4(r,g,b,rho);
+          vColor = vec4(rho,rho,rho,1.0);
           
-          gl_Position=projectionMatrix * modelViewMatrix * tmpPos;
-          gl_PointSize=5.0;
+          gl_Position=projectionMatrix * modelViewMatrix * vec4(tmpX,tmpY,tmpZ,1.0);
           
-          #include <fog_vertex>
+          gl_PointSize=3.0;
+          
+          //#include <fog_vertex>
 
       }
     </script>
     <script type="x-shader/x-fragment" id="pointFragmentShader">
-        #include <fog_pars_fragment>
+        //#include <fog_pars_fragment>
         varying vec4 vColor;
         void main(){
             gl_FragColor=vColor;
-            #include <fog_fragment>
+            //#include <fog_fragment>
         }
     </script>
 
 
-    <script type="x-shader/x-fragment" id="fragmentShaderAcceleration">  
+    <script type="x-shader/x-fragment" id="fragmentShaderAcceleration">
+      uniform float equationOfStateConst;
+      uniform float polytropicIndex;
+      uniform float smoothingLength;
+      uniform float particleMass;
+      uniform float lambda;
+      uniform float viscosity;
+
+      const float PI = 3.141592653589793;
+
+      const float width = resolution.x;
+			const float height = resolution.y;
+
+      vec3 evaluateKernelDerivative(float xDist, float yDist, float zDist){
+        float r = sqrt(xDist*xDist + yDist*yDist + zDist*zDist);
+
+        float n = -2.0 * exp(-(r * r) / (smoothingLength * smoothingLength));
+        n /= pow(smoothingLength,5.0);
+        n /= pow(PI, (3.0/2.0) );
+
+        return vec3(n * xDist, n * yDist, n * zDist);
+      }
+
       void main(){
         vec2 uv = gl_FragCoord.xy / resolution.xy;
-        vec4 tmpPos = texture2D( texturePosition, uv );
-        float yAcc = -tmpPos.y / 8.0;
-        gl_FragColor = vec4(0.0,yAcc,0.0,1.0);
+        vec4 tmpPos = texture2D( texturePosition, uv);
+        vec4 tmpVel = texture2D( textureVelocity, uv);
+
+        float rho = tmpPos.a;
+
+        float pressure = equationOfStateConst * pow(rho, 1.0 + (1.0 / polytropicIndex) );
+
+        float selfXPos = tmpPos.x;
+        float selfYPos = tmpPos.y;
+        float selfZPos = tmpPos.z;
+
+        vec3 otherPosition;
+        vec3 gradient;
+
+        float ax=0.0;
+        float ay=0.0;
+        float az=0.0;
+
+        for (float y = 0.0; y < height; y++){
+          for (float x = 0.0; x < width; x++){
+            vec2 ref = vec2( x + 0.5, y + 0.5 ) / resolution.xy;
+
+            otherPosition = texture2D(texturePosition, ref).xyz;
+
+            float xDist = otherPosition.x - selfXPos;
+            float yDist = otherPosition.y - selfYPos;
+            float zDist = otherPosition.z - selfZPos;
+
+            gradient = evaluateKernelDerivative(xDist,yDist,zDist);
+
+            ax += particleMass * 2.0 * (pressure/(rho*rho)) * gradient.x;
+            ay += particleMass * 2.0 * (pressure/(rho*rho)) * gradient.y;
+            az += particleMass * 2.0 * (pressure/(rho*rho)) * gradient.z;
+          }
+        }
+
+        ax = -ax - lambda * selfXPos - viscosity * tmpVel.x;
+        ay = -ay - lambda * selfYPos - viscosity * tmpVel.y;
+        az = -az - lambda * selfZPos - viscosity * tmpVel.z;
+
+        gl_FragColor = vec4(ax,ay,az,1.0);
 
       }
     </script>
@@ -66,23 +138,61 @@
 
         float xVel = tmpVel.x + tmpAcc.x * 0.5 * deltaT;
         float yVel = tmpVel.y + tmpAcc.y * 0.5 * deltaT;
+        float zVel = tmpVel.z + tmpAcc.z * 0.5 * deltaT;
 
-        gl_FragColor = vec4(xVel,yVel,0.0,1.0);
+        gl_FragColor = vec4(xVel,yVel,zVel,1.0);
       }
     </script>
 
     <script type="x-shader/x-fragment" id="fragmentShaderPosition">  
       uniform float deltaT;
+      uniform float smoothingLength;
+      uniform float particleMass;
+
+      const float PI = 3.141592653589793;
+
+      const float width = resolution.x;
+			const float height = resolution.y;
+
+      float evaluateKernel(float xDist, float yDist, float zDist){
+        float r = sqrt(xDist*xDist + yDist*yDist + zDist*zDist);
+
+        float w = (1.0 / (smoothingLength * sqrt(PI)));
+        w = w * w * w * exp( -(r*r) / (smoothingLength*smoothingLength));
+
+        return w;
+      }
 
       void main(){
         vec2 uv = gl_FragCoord.xy / resolution.xy;
         vec4 tmpVel = texture2D( textureVelocity, uv);
         vec4 tmpPos = texture2D( texturePosition, uv);
 
-        float xPos = tmpPos.x + tmpVel.x * deltaT;
-        float yPos = tmpPos.y + tmpVel.y * deltaT;
+        float selfXPos = tmpPos.x + tmpVel.x * deltaT;
+        float selfYPos = tmpPos.y + tmpVel.y * deltaT;
+        float selfZPos = tmpPos.z + tmpVel.z * deltaT;
 
-        gl_FragColor = vec4(xPos,yPos,0.0,1.0);
+        //compute particle density from all positions
+        vec3 otherPosition;
+
+        float rho = 0.0;
+
+        for (float y = 0.0; y < height; y++){
+          for (float x = 0.0; x < width; x++){
+            vec2 ref = vec2( x + 0.5, y + 0.5 ) / resolution.xy;
+
+            otherPosition = texture2D(texturePosition, ref).xyz;
+
+            float xDist = otherPosition.x - selfXPos;
+            float yDist = otherPosition.y - selfYPos;
+            float zDist = otherPosition.z - selfZPos;
+
+            rho += particleMass * evaluateKernel(xDist, yDist, zDist);
+          }
+        }
+
+
+        gl_FragColor = vec4(selfXPos,selfYPos,selfZPos,rho);
       }
     </script>
 

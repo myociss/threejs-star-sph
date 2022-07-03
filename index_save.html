@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="static/styles/main.css">
+    <title>Three.JS-Webpack Boilerplate</title>
+  </head>
+  <body>
+    <script type="x-shader/x-vertex" id="physicsVertexShader">
+        attribute vec2 reference;
+        
+        uniform sampler2D texturePosition;
+        #include <fog_pars_vertex>
+
+        varying vec4 vColor;
+
+        void main(){
+            #include <begin_vertex>
+            #include <project_vertex>
+            vec4 tmpPos = texture2D(texturePosition,reference);
+
+            //vec3 pos=tmpPos.xyz;
+
+            //vColor = vec4(0.0,1.0,1.0,1.0);
+            float r = (tmpPos.x / 1000.0) + 0.5;
+            float g = (tmpPos.y / 1000.0) + 0.5;
+            float b = (tmpPos.z / 1000.0) + 0.5;
+            vColor = vec4(r,g,b,1.0);
+
+            gl_Position=projectionMatrix * modelViewMatrix * vec4(tmpPos.x,tmpPos.y,tmpPos.z, 1.0);
+            gl_PointSize=5.0;
+
+            //#include <begin_vertex>
+            //#include <project_vertex>
+            #include <fog_vertex>
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="pointFragmentShader">
+        #include <fog_pars_fragment>
+        varying vec4 vColor;
+        void main(){
+            gl_FragColor=vColor;
+            #include <fog_fragment>
+        }
+    </script>
+
+    <!-- Information modal -->
+    <!--a id="open-modal-btn" class="float">
+      <i class="icon-float material-icons">menu</i>
+    </a>
+    <div id="info-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-modal-btn">&times;</span>
+        <h3>Welcome to my Three.JS-Webpack boilerplate!</h3>
+        <p>It is a great and easy way to bootstrap Three.Js project.</p>
+        <p>To get started clone the repo <code>git clone https://github.com/aakatev/three-js-webpack.git</code>.</p>
+        <p>For more information, navigate to the <a href="https://github.com/aakatev/three-js-webpack">project GitHub page</a>!</p>
+      </div>
+    </div-->
+    <!-- End information modal -->
+
+    <script src="public/bundle.js"></script>
+  </body>
+</html>

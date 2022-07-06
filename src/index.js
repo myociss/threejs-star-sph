@@ -5,11 +5,12 @@ import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRe
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 if (WEBGL.isWebGLAvailable()) {
-  var camera, scene, renderer, gpuCompute, geometry, positionVariable, velocityVariable, accelerationVariable,
-    positionUniforms, velocityUniforms, accelerationUniforms, points, controls,
-    accelerationTextureIndex, velocityTextureIndex, positionTextureIndex;
+  var camera, scene, renderer, gpuCompute, geometry, 
+    positionVariable, velocityVariable, accelerationVariable, densityVariable,
+    positionUniforms, velocityUniforms, accelerationUniforms, densityUniforms, points, controls,
+    accelerationTextureIndex, velocityTextureIndex, positionTextureIndex, densityTextureIndex;
 
-  var textureDim = 128;
+  var textureDim = 32;
   var nParticles = textureDim * textureDim;
 
   var smoothingLength = 0.1;
@@ -26,12 +27,13 @@ if (WEBGL.isWebGLAvailable()) {
   initParticles();
 
   // compute position with zero velocity to get particle densities
-  computePosition();
+  //computePosition();
+  computeDensity();
   computeAcceleration();
 
-  animate();
+  //animate();
 
-  //render();
+  render();
 
 
 
@@ -67,6 +69,7 @@ if (WEBGL.isWebGLAvailable()) {
     accelerationTextureIndex = 0;
     velocityTextureIndex = 0;
     positionTextureIndex = 0;
+    densityTextureIndex = 0;
 
     gpuCompute = new GPUComputationRenderer(textureDim,textureDim,renderer);
 
@@ -90,7 +93,7 @@ if (WEBGL.isWebGLAvailable()) {
     var velArray = dtVelocity.image.data;
 
     for (var i=0; i < velArray.length; i+=4){
-      velArray[i + 0] = deltaT;
+      velArray[i + 0] = 0;
       velArray[i + 1] = 0;
       velArray[i + 2] = 0;
       velArray[i + 3] = 0;
@@ -107,23 +110,40 @@ if (WEBGL.isWebGLAvailable()) {
       accArray[i + 3] = 0;
     }
 
+    var dtDensity = gpuCompute.createTexture();
+
+    var densArray = dtDensity.image.data;
+
+    for (var i=0; i < accArray.length; i+=4){
+      densArray[i + 0] = 0;
+      densArray[i + 1] = 0;
+      densArray[i + 2] = 0;
+      densArray[i + 3] = 0;
+    }
+
     positionVariable = gpuCompute.addVariable("texturePosition",
-        document.getElementById('fragmentShaderPosition').textContent, dtPosition);
+      document.getElementById('fragmentShaderPosition').textContent, dtPosition);
 
     velocityVariable = gpuCompute.addVariable("textureVelocity",
-        document.getElementById('fragmentShaderVelocity').textContent, dtVelocity);
+      document.getElementById('fragmentShaderVelocity').textContent, dtVelocity);
 
     accelerationVariable = gpuCompute.addVariable("textureAcceleration",
-        document.getElementById('fragmentShaderAcceleration').textContent, dtAcceleration);
+      document.getElementById('fragmentShaderAcceleration').textContent, dtAcceleration);
 
-    gpuCompute.setVariableDependencies(accelerationVariable, [positionVariable, velocityVariable]);
+    densityVariable = gpuCompute.addVariable("textureDensity",
+      document.getElementById('fragmentShaderDensity').textContent, dtDensity);
+
+    gpuCompute.setVariableDependencies(accelerationVariable, [positionVariable, velocityVariable, densityVariable]);
     gpuCompute.setVariableDependencies(velocityVariable, [velocityVariable, accelerationVariable]);
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
+    gpuCompute.setVariableDependencies(densityVariable, [positionVariable]);
 
     positionUniforms = positionVariable.material.uniforms;
     positionUniforms.deltaT = {value: deltaT};
-    positionUniforms.smoothingLength = {value: smoothingLength};
-    positionUniforms.particleMass = {value: particleMass};
+    
+    densityUniforms = densityVariable.material.uniforms;
+    densityUniforms.smoothingLength = {value: smoothingLength};
+    densityUniforms.particleMass = {value: particleMass};
 
     velocityUniforms = velocityVariable.material.uniforms;
     velocityUniforms.deltaT = {value: deltaT};
@@ -198,6 +218,7 @@ if (WEBGL.isWebGLAvailable()) {
     var nextIdx = accelerationTextureIndex === 0 ? 1 : 0;
     uniforms['texturePosition'].value = positionVariable.renderTargets[ positionTextureIndex ].texture;
     uniforms['textureVelocity'].value = velocityVariable.renderTargets[ velocityTextureIndex ].texture;
+    uniforms['textureDensity'].value = densityVariable.renderTargets[ densityTextureIndex ].texture;
     var target = accelerationVariable.renderTargets[nextIdx];
     gpuCompute.doRenderTarget(accelerationVariable.material,target);
     accelerationTextureIndex = nextIdx;
@@ -225,6 +246,16 @@ if (WEBGL.isWebGLAvailable()) {
     positionTextureIndex = nextIdx;
   }
 
+  function computeDensity(){
+    var uniforms = densityVariable.material.uniforms;
+    var nextIdx = densityTextureIndex === 0 ? 1 : 0;
+    uniforms['texturePosition'].value = positionVariable.renderTargets[ positionTextureIndex ].texture;
+
+    var target = densityVariable.renderTargets[nextIdx];
+    gpuCompute.doRenderTarget(densityVariable.material,target);
+    densityTextureIndex = nextIdx;
+  }
+
   function animate(){
     requestAnimationFrame(animate);
     //controls.update();
@@ -235,8 +266,11 @@ if (WEBGL.isWebGLAvailable()) {
 
     computeVelocity();
     computePosition();
+    computeDensity();
     computeAcceleration();
     computeVelocity();
+
+    console.log(positionVariable.renderTargets[positionTextureIndex].texture);
 
     points.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
 

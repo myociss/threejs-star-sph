@@ -10,7 +10,7 @@ if (WEBGL.isWebGLAvailable()) {
     positionUniforms, velocityUniforms, accelerationUniforms, densityUniforms, points, controls,
     accelerationTextureIndex, velocityTextureIndex, positionTextureIndex, densityTextureIndex;
 
-  var textureDim = 32;
+  var textureDim = 8;
   var nParticles = textureDim * textureDim;
 
   var smoothingLength = 0.1;
@@ -28,12 +28,32 @@ if (WEBGL.isWebGLAvailable()) {
 
   // compute position with zero velocity to get particle densities
   //computePosition();
+
   computeDensity();
+  //debugTexture(densityVariable.renderTargets[ densityTextureIndex ].texture);
+  
   computeAcceleration();
+  
+  var tex=densityVariable.renderTargets[ densityTextureIndex ];
+  var pixelBuffer = new Float32Array( textureDim * textureDim * 4 );
+  renderer.readRenderTargetPixels( tex, 0, 0, textureDim, textureDim, pixelBuffer );
+  console.log(pixelBuffer);
+
+  /*for (var px_idx=0;px_idx<nParticles;px_idx++){
+    var u = (px_idx % textureDim) / textureDim;
+    var v = ~~(px_idx/textureDim) / textureDim;
+
+    var pixelBuffer = new Float32Array( 1 * 1 * 4 );
+    renderer.readRenderTargetPixels( tex, u, v, textureDim, textureDim, pixelBuffer );
+    console.log(pixelBuffer);
+  }*/
+
+  //debugTexture(accelerationVariable.renderTargets[ accelerationTextureIndex ].texture);
 
   //animate();
 
-  render();
+
+  //render();
 
 
 
@@ -56,6 +76,8 @@ if (WEBGL.isWebGLAvailable()) {
     renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    //take this out
+    renderer.autoClear=false;
     document.body.appendChild(renderer.domElement);
 
     //controls = new OrbitControls( camera, renderer.domElement );
@@ -196,6 +218,8 @@ if (WEBGL.isWebGLAvailable()) {
     points = new THREE.Points( geometry, material );
     points.matrixAutoUpdate = false;
     points.updateMatrix();
+
+    points.needsUpdate=true;
     scene.add( points );
   }
 
@@ -270,12 +294,89 @@ if (WEBGL.isWebGLAvailable()) {
     computeAcceleration();
     computeVelocity();
 
-    console.log(positionVariable.renderTargets[positionTextureIndex].texture);
+    //console.log(positionVariable.renderTargets[positionTextureIndex].texture);
 
     points.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
 
     renderer.render(scene, camera);
   }
+
+  function debugTexture(input){
+    renderer.clear();
+
+    var debugScene = new THREE.Scene();
+
+	  var debugCamera = new THREE.Camera();
+	  debugCamera.position.z = 1;
+
+    
+	  var passThruUniforms = {
+		  passThruTexture: { value: input }
+	  };
+
+    var passThruShader = gpuCompute.createShaderMaterial( getPassThroughFragmentShader(), passThruUniforms );
+
+    var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), passThruShader );
+    debugScene.add( mesh );
+
+    //var currentRenderTarget = renderer.getRenderTarget();
+    renderer.render(debugScene, debugCamera);
+
+    //var dataURL = renderer.domElement.toDataURL();
+    //var img = new Image();
+    //img.src = dataURL;
+    //console.log(renderer.domElement.getContext('2d').getImageData());
+
+    //var context = renderer.domElement.getContext('2d');
+    //console.log(context);
+
+    var debugTextureUniforms = { debugTexture: { value: input } };
+    var vertexPassShader = 
+    `
+        void main()	{
+            gl_Position = vec4( position, 1.0 );
+		}
+    `;
+
+    var passThruTexture = getPassThroughFragmentShader();
+
+    var debugMaterial = new THREE.ShaderMaterial({
+      uniforms: debugTextureUniforms,
+      vertexShader: vertexPassShader,
+      fragmentShader: passThruTexture
+    });
+  
+    debugMaterial.defines.resolution = 'vec2( ' + textureDim.toFixed( 1 ) + ', ' + textureDim.toFixed( 1 ) + ' )';
+
+    var debugMesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), debugMaterial );
+    
+    debugScene.add( debugMesh );
+
+    var debugRenderTarget = gpuCompute.createRenderTarget(textureDim, textureDim, null, null, THREE.NearestFilter, 
+      THREE.NearestFilter);
+
+    renderer.setRenderTarget(debugRenderTarget);
+    //renderer.setSize(textureDim,textureDim);
+    //renderer.setViewport( 0, 0, textureDim, textureDim );
+    renderer.clearDepth();
+    renderer.render(debugScene,debugCamera);
+
+  }
+
+  // taken from GPUComputationRenderer
+  function getPassThroughFragmentShader() {
+
+		return	"uniform sampler2D passThruTexture;\n" +
+				"\n" +
+				"void main() {\n" +
+				"\n" +
+				"	vec2 uv = gl_FragCoord.xy / resolution.xy;\n" +
+				"\n" +
+				"	gl_FragColor = texture2D( passThruTexture, uv );\n" +
+				"\n" +
+				"}\n";
+
+	}
 
 } else {
   var warning = WEBGL.getWebGLErrorMessage();

@@ -13,7 +13,7 @@ if (WEBGL.isWebGLAvailable()) {
     positionUniforms, velocityUniforms, accelerationUniforms, densityUniforms, points, controls,
     accelerationTextureIndex, velocityTextureIndex, positionTextureIndex, densityTextureIndex;
 
-  var textureDim = 80;
+  var textureDim = 64;
   var nParticles = textureDim * textureDim;
 
   var smoothingLength = 0.1;
@@ -34,6 +34,8 @@ if (WEBGL.isWebGLAvailable()) {
 
   computeDensity();  
   computeAcceleration();
+
+  //render();
 
   //for (var i=0;i<100;i++){
   //  render();
@@ -63,13 +65,14 @@ if (WEBGL.isWebGLAvailable()) {
     scene.background = new THREE.Color(0x050505);
     scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
     //scene.fog = new THREE.Fog( 0x050505, 3000, 4000 );
+    //scene.fog = new THREE.FogExp2(0x050505, 0.0004);
 
     //renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     //take this out
-    renderer.autoClear=false;
+    //renderer.autoClear=false;
     document.body.appendChild(renderer.domElement);
 
     //controls = new OrbitControls( camera, renderer.domElement );
@@ -216,14 +219,14 @@ if (WEBGL.isWebGLAvailable()) {
       vertexShader: document.getElementById('physicsVertexShader').textContent,
       fragmentShader: document.getElementById('pointFragmentShader').textContent,
       vertexColors: true,
-      //fog: true
+      fog: true
     });
 
     points = new THREE.Points( geometry, material );
     points.matrixAutoUpdate = false;
     points.updateMatrix();
 
-    points.needsUpdate=true;
+    //points.needsUpdate=true;
     scene.add( points );
   }
 

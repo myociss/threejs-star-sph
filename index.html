@@ -10,16 +10,15 @@
   <body>
     <script type="x-shader/x-vertex" id="physicsVertexShader">
       attribute vec2 reference;
+      attribute vec3 vertex_offset;
       
       uniform sampler2D texturePosition;
       uniform float scale;
-      //#include <fog_pars_vertex>
+      #include <fog_pars_vertex>
 
       varying vec4 vColor;
 
       void main(){
-          //#include <begin_vertex>
-          //#include <project_vertex>
           
           //vec4 tmpPos = scale * texture2D(texturePosition,reference);
           vec4 tmpPos = texture2D(texturePosition,reference);
@@ -37,23 +36,29 @@
           float r = (tmpX / scale) + 0.5;
           float g = (tmpY / scale) + 0.5;
           float b = (tmpZ / scale) + 0.5;
-          vColor = vec4(r,g,b,rho);
+          //vColor = vec4(r,g,b,rho);
           //vColor = vec4(rho,rho,rho,1.0);
           
-          gl_Position=projectionMatrix * modelViewMatrix * vec4(tmpX,tmpY,tmpZ,1.0);
+          //gl_Position=projectionMatrix * modelViewMatrix * vec4(tmpX,tmpY,tmpZ,1.0);
           
-          gl_PointSize=3.0;
+          gl_PointSize= 3.0;
           
-          //#include <fog_vertex>
+          vec3 transformed = vec3(tmpX,tmpY,tmpZ);
+          vec4 mvPosition = vec4( transformed, 1.0 );
+
+          mvPosition = modelViewMatrix * mvPosition;
+          gl_Position = projectionMatrix * mvPosition;
+          
+          #include <fog_vertex>
 
       }
     </script>
     <script type="x-shader/x-fragment" id="pointFragmentShader">
-        //#include <fog_pars_fragment>
+        #include <fog_pars_fragment>
         varying vec4 vColor;
         void main(){
             gl_FragColor=vColor;
-            //#include <fog_fragment>
+            #include <fog_fragment>
         }
     </script>
 
@@ -143,7 +148,6 @@
 
         gl_FragColor = vec4(ax,ay,az,1.0);
 
-        //gl_FragColor = vec4(gradientZTest,0.0,0.0,1.0);
       }
     </script>
 
@@ -187,27 +191,6 @@
         float selfXPos = tmpPos.x + tmpVel.x * deltaT;
         float selfYPos = tmpPos.y + tmpVel.y * deltaT;
         float selfZPos = tmpPos.z + tmpVel.z * deltaT;
-
-        //compute particle density from all positions
-        
-        /*vec3 otherPosition;
-
-        float rho = 0.0;
-
-        for (float y = 0.0; y < height; y++){
-          for (float x = 0.0; x < width; x++){
-            vec2 ref = vec2( x + 0.5, y + 0.5 ) / resolution.xy;
-
-            otherPosition = texture2D(texturePosition, ref).xyz;
-
-            float xDist = otherPosition.x - selfXPos;
-            float yDist = otherPosition.y - selfYPos;
-            float zDist = otherPosition.z - selfZPos;
-
-            rho += particleMass * evaluateKernel(xDist, yDist, zDist);
-          }
-        }
-        */
 
         gl_FragColor = vec4(selfXPos,selfYPos,selfZPos,0.0);
       }

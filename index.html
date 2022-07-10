@@ -10,7 +10,7 @@
   <body>
     <script type="x-shader/x-vertex" id="physicsVertexShader">
       attribute vec2 reference;
-      attribute vec3 vertex_offset;
+      attribute vec3 pos_offset;
       
       uniform sampler2D texturePosition;
       uniform float scale;
@@ -44,7 +44,7 @@
           gl_PointSize= 3.0;
           
           vec3 transformed = vec3(tmpX,tmpY,tmpZ);
-          vec4 mvPosition = vec4( transformed, 1.0 );
+          vec4 mvPosition = vec4( position + transformed, 1.0 );
 
           mvPosition = modelViewMatrix * mvPosition;
           gl_Position = projectionMatrix * mvPosition;

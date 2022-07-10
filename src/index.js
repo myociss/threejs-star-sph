@@ -6,11 +6,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
 
 if (WEBGL.isWebGLAvailable()) {
-  //var startPointsPython = [[0.4967141530112327, -0.13826430117118466, 0.6476885381006925], [1.5230298564080254, -0.23415337472333597, -0.23413695694918055], [1.5792128155073915, 0.7674347291529088, -0.4694743859349521], [0.5425600435859647, -0.46341769281246226, -0.46572975357025687], [0.24196227156603412, -1.913280244657798, -1.7249178325130328], [-0.5622875292409727, -1.0128311203344238, 0.3142473325952739], [-0.9080240755212109, -1.4123037013352915, 1.465648768921554], [-0.22577630048653566, 0.06752820468792384, -1.4247481862134568], [-0.5443827245251827, 0.11092258970986608, -1.1509935774223028], [0.37569801834567196, -0.600638689918805, -0.2916937497932768], [-0.6017066122293969, 1.8522781845089378, -0.013497224737933921], [-1.0577109289559004, 0.822544912103189, -1.2208436499710222], [0.2088635950047554, -1.9596701238797756, -1.3281860488984305], [0.19686123586912352, 0.7384665799954104, 0.1713682811899705], [-0.11564828238824053, -0.3011036955892888, -1.4785219903674274], [-0.7198442083947086, -0.4606387709597875, 1.0571222262189157], [0.3436182895684614, -1.763040155362734, 0.324083969394795], [-0.38508228041631654, -0.6769220003059587, 0.6116762888408679], [1.030999522495951, 0.9312801191161986, -0.8392175232226385], [-0.3092123758512146, 0.33126343140356396, 0.9755451271223592], [-0.47917423784528995, -0.18565897666381712, -1.1063349740060282], [-1.1962066240806708, 0.812525822394198, 1.356240028570823], [-0.07201012158033385, 1.0035328978920242, 0.36163602504763415], [-0.6451197546051243, 0.36139560550841393, 1.5380365664659692], [-0.03582603910995154, 1.5646436558140062, -2.6197451040897444], [0.8219025043752238, 0.08704706823817122, -0.29900735046586746], [0.0917607765355023, -1.9875689146008928, -0.21967188783751193], [0.3571125715117464, 1.477894044741516, -0.5182702182736474], [-0.8084936028931876, -0.5017570435845365, 0.9154021177020741], [0.32875110965968446, -0.5297602037670388, 0.5132674331133561], [0.09707754934804039, 0.9686449905328892, -0.7020530938773524], [-0.3276621465977682, -0.39210815313215763, -1.4635149481321186], [0.29612027706457605, 0.26105527217988933, 0.00511345664246089], [-0.23458713337514692, -1.4153707420504142, -0.42064532276535904], [-0.3427145165267695, -0.8022772692216189, -0.16128571166600914], [0.4040508568145384, 1.8861859012105302, 0.17457781283183896], [0.25755039072276437, -0.07444591576616721, -1.9187712152990415], [-0.026513875449216878, 0.06023020994102644, 2.463242112485286], [-0.19236096478112252, 0.30154734233361247, -0.03471176970524331], [-1.168678037619532, 1.1428228145150205, 0.7519330326867741], [0.7910319470430469, -0.9093874547947389, 1.4027943109360992], [-1.4018510627922809, 0.5868570938002703, 2.1904556258099785], [-0.9905363251306883, -0.5662977296027719, 0.09965136508764122], [-0.5034756541161992, -1.5506634310661327, 0.06856297480602733], [-1.0623037137261049, 0.4735924306351816, -0.9194242342338032], [1.5499344050175394, -0.7832532923362371, -0.3220615162056756], [0.8135172173696698, -1.2308643164339552, 0.22745993460412942], [1.307142754282428, -1.6074832345612275, 0.1846338585323042], [0.25988279424842353, 0.7818228717773104, -1.236950710878082], [-1.3204566130842763, 0.5219415656168976, 0.29698467323318606], [0.25049285034587654, 0.3464482094969757, -0.6800247215784908], [0.23225369716100355, 0.29307247329868125, -0.7143514180263678], [1.8657745111447566, 0.4738329209117875, -1.1913034972026486], [0.6565536086338297, -0.9746816702273214, 0.787084603742452], [1.158595579007404, -0.8206823183517105, 0.9633761292443218], [0.4127809269364983, 0.82206015999449, 1.8967929826539474], [-0.2453881160028705, -0.7537361643574896, -0.8895144296255233], [-0.8158102849654383, -0.0771017094141042, 0.3411519748166439], [0.27669079933001905, 0.8271832490360238, 0.01300189187790702], [1.4535340771573169, -0.2646568332379561, 2.720169166589619], [0.6256673477650062, -0.8571575564162826, -1.0708924980611123], [0.4824724152431853, -0.2234627853258509, 0.714000494092092], [0.47323762457354485, -0.07282891265687277, -0.846793718068405], [-1.5148472246858646, -0.4465149520670211, 0.8563987943234723]];
 
   var camera, scene, renderer, gpuCompute, geometry, 
     positionVariable, velocityVariable, accelerationVariable, densityVariable,
-    positionUniforms, velocityUniforms, accelerationUniforms, densityUniforms, points, controls,
+    positionUniforms, velocityUniforms, accelerationUniforms, densityUniforms, mesh, points, controls,
     accelerationTextureIndex, velocityTextureIndex, positionTextureIndex, densityTextureIndex;
 
   var textureDim = 64;
@@ -50,6 +49,7 @@ if (WEBGL.isWebGLAvailable()) {
 
 
   animate();
+  //render();
 
   function initScene() {
     camera = new THREE.PerspectiveCamera(
@@ -67,8 +67,8 @@ if (WEBGL.isWebGLAvailable()) {
     //scene.fog = new THREE.Fog( 0x050505, 3000, 4000 );
     //scene.fog = new THREE.FogExp2(0x050505, 0.0004);
 
-    //renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer = new THREE.WebGLRenderer();
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    //renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     //take this out
@@ -191,10 +191,62 @@ if (WEBGL.isWebGLAvailable()) {
     }
   }
 
-
   function initParticles(){
+    //var circGeom = new THREE.CircleGeometry(10,6);
+    var circGeom = new THREE.IcosahedronGeometry(20.0,0);
+    var circBuffer = new THREE.BufferGeometry().fromGeometry(circGeom);
+    console.log(circBuffer.attributes);
+    
+    
+    geometry = new THREE.InstancedBufferGeometry();
+    geometry.index = circBuffer.index;
+    geometry.attributes = circBuffer.attributes;
+
+    var references = new THREE.InstancedBufferAttribute( new Float32Array( nParticles * 2 ), 2 );
+    for (var i=0; i<nParticles; i++){
+      var u = (i % textureDim) / textureDim;
+      var v = ~~(i/textureDim) / textureDim;
+      references.array[i * 2] = u;
+      references.array[i * 2 + 1]=v;
+    }
+
+    //console.log(geometry);
+
+    geometry.setAttribute('reference',references);
+    geometry.setAttribute('pos_offset', geometry.attributes.position);
+
+    var material = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge( [
+        THREE.UniformsLib[ 'fog' ], 
+        { texturePosition: {value: null}, 
+          scale: {value: 1500.0},
+          Ka: { value: new THREE.Vector3(0.9, 0.5, 0.3) },
+          Kd: { value: new THREE.Vector3(0.9, 0.5, 0.3) },
+          Ks: { value: new THREE.Vector3(0.8, 0.8, 0.8) },
+          LightIntensity: { value: new THREE.Vector4(0.5, 0.5, 0.5, 1.0) },
+          LightPosition: { value: new THREE.Vector4(0.0, 2000.0, 0.0, 1.0) },
+          Shininess: { value: 200.0 } }
+      ] ),
+      vertexShader: document.getElementById('physicsVertexShader').textContent,
+      fragmentShader: document.getElementById('pointFragmentShader').textContent,
+      vertexColors: true,
+      fog: true,
+      depthTest: true,
+      depthWrite: true
+    });
+
+    mesh = new THREE.Mesh(geometry,material);
+    mesh.matrixAutoUpdate = false;
+    mesh.updateMatrix();
+    scene.add(mesh);
+  }
+
+
+  /*function initParticles(){
 
     geometry = new THREE.BufferGeometry();
+
+    console.log(geometry.attributes);
 
     var vertices = new THREE.BufferAttribute( new Float32Array( nParticles * 3 ), 3 );
     var references = new THREE.BufferAttribute( new Float32Array( nParticles * 2 ), 2 );
@@ -208,6 +260,8 @@ if (WEBGL.isWebGLAvailable()) {
 
     geometry.setAttribute('position',vertices);
     geometry.setAttribute('reference',references);
+
+    console.log(geometry.attributes);
 
 
     var material = new THREE.ShaderMaterial({
@@ -228,7 +282,7 @@ if (WEBGL.isWebGLAvailable()) {
 
     //points.needsUpdate=true;
     scene.add( points );
-  }
+  }*/
 
   function randNormal() {
     var a = 0, b = 0;
@@ -303,7 +357,8 @@ if (WEBGL.isWebGLAvailable()) {
 
     //console.log(positionVariable.renderTargets[positionTextureIndex].texture);
 
-    points.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
+    //points.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
+    mesh.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
 
     renderer.render(scene, camera);
   }

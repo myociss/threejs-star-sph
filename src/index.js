@@ -53,17 +53,18 @@ if (WEBGL.isWebGLAvailable()) {
 
   function initScene() {
     camera = new THREE.PerspectiveCamera(
-      45,
+      70,
       window.innerWidth / window.innerHeight,
       5,
       3500
     );
 
-    camera.position.z = 2750;
+    //camera.position.z = 2750;
+    camera.position.z = 1500;
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050505);
-    scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
+    scene.fog = new THREE.Fog( 0x050505, 1000, 3000 );
     //scene.fog = new THREE.Fog( 0x050505, 3000, 4000 );
     //scene.fog = new THREE.FogExp2(0x050505, 0.0004);
 
@@ -193,7 +194,8 @@ if (WEBGL.isWebGLAvailable()) {
 
   function initParticles(){
     //var circGeom = new THREE.CircleGeometry(10,6);
-    var circGeom = new THREE.IcosahedronGeometry(20.0,0);
+    //var circGeom = new THREE.IcosahedronGeometry(20.0,0);
+    var circGeom = new THREE.SphereGeometry( 15, 32, 16 );
     var circBuffer = new THREE.BufferGeometry().fromGeometry(circGeom);
     console.log(circBuffer.attributes);
     
@@ -220,16 +222,16 @@ if (WEBGL.isWebGLAvailable()) {
         THREE.UniformsLib[ 'fog' ], 
         { texturePosition: {value: null}, 
           scale: {value: 1500.0},
-          Ka: { value: new THREE.Vector3(0.9, 0.5, 0.3) },
-          Kd: { value: new THREE.Vector3(0.9, 0.5, 0.3) },
+          Ka: { value: new THREE.Vector3(0.0, 1.0, 1.0) },
+          Kd: { value: new THREE.Vector3(0.0, 1.0, 1.0) },
           Ks: { value: new THREE.Vector3(0.8, 0.8, 0.8) },
           LightIntensity: { value: new THREE.Vector4(0.5, 0.5, 0.5, 1.0) },
-          LightPosition: { value: new THREE.Vector4(0.0, 2000.0, 0.0, 1.0) },
+          LightPosition: { value: new THREE.Vector4(0.0, 1000.0, 0.0, 1.0) },
           Shininess: { value: 200.0 } }
       ] ),
       vertexShader: document.getElementById('physicsVertexShader').textContent,
       fragmentShader: document.getElementById('pointFragmentShader').textContent,
-      vertexColors: true,
+      //vertexColors: true,
       fog: true,
       depthTest: true,
       depthWrite: true

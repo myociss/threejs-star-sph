@@ -1,15 +1,16 @@
 import * as THREE from 'three'
 import { WEBGL } from './webgl'
-//import './modal'
+import './modal'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { MinEquation } from 'three';
 
 
 if (WEBGL.isWebGLAvailable()) {
 
   var camera, scene, renderer, gpuCompute, geometry, 
     positionVariable, velocityVariable, accelerationVariable, densityVariable,
-    positionUniforms, velocityUniforms, accelerationUniforms, densityUniforms, mesh, points, controls,
+    positionUniforms, velocityUniforms, accelerationUniforms, densityUniforms, mesh, controls,
     accelerationTextureIndex, velocityTextureIndex, positionTextureIndex, densityTextureIndex;
 
   var textureDim = 64;
@@ -40,12 +41,12 @@ if (WEBGL.isWebGLAvailable()) {
   //  render();
   //}
   
-  //var tex=densityVariable.renderTargets[ densityTextureIndex ];
+  var tex=densityVariable.renderTargets[ densityTextureIndex ];
   
   //var tex=accelerationVariable.renderTargets[ accelerationTextureIndex ];
-  //var pixelBuffer = new Float32Array( textureDim * textureDim * 4 );
-  //renderer.readRenderTargetPixels( tex, 0, 0, textureDim, textureDim, pixelBuffer );
-  //console.log(pixelBuffer);
+  var pixelBuffer = new Float32Array( textureDim * textureDim * 4 );
+  renderer.readRenderTargetPixels( tex, 0, 0, textureDim, textureDim, pixelBuffer );
+  console.log(pixelBuffer);
 
 
   animate();
@@ -151,6 +152,7 @@ if (WEBGL.isWebGLAvailable()) {
       densArray[i + 3] = 0;
     }
 
+
     positionVariable = gpuCompute.addVariable("texturePosition",
       document.getElementById('fragmentShaderPosition').textContent, dtPosition);
 
@@ -195,14 +197,14 @@ if (WEBGL.isWebGLAvailable()) {
   function initParticles(){
     //var circGeom = new THREE.CircleGeometry(10,6);
     //var circGeom = new THREE.IcosahedronGeometry(20.0,0);
-    var circGeom = new THREE.SphereGeometry( 15, 32, 16 );
-    var circBuffer = new THREE.BufferGeometry().fromGeometry(circGeom);
-    console.log(circBuffer.attributes);
+    var sphereGeom = new THREE.SphereGeometry( 15, 32, 16 );
+    var sphereBuffer = new THREE.BufferGeometry().fromGeometry(sphereGeom);
+    console.log(sphereBuffer.attributes);
     
     
     geometry = new THREE.InstancedBufferGeometry();
-    geometry.index = circBuffer.index;
-    geometry.attributes = circBuffer.attributes;
+    geometry.index = sphereBuffer.index;
+    geometry.attributes = sphereBuffer.attributes;
 
     var references = new THREE.InstancedBufferAttribute( new Float32Array( nParticles * 2 ), 2 );
     for (var i=0; i<nParticles; i++){
@@ -217,13 +219,18 @@ if (WEBGL.isWebGLAvailable()) {
     geometry.setAttribute('reference',references);
     geometry.setAttribute('pos_offset', geometry.attributes.position);
 
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
+
     var material = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge( [
         THREE.UniformsLib[ 'fog' ], 
         { texturePosition: {value: null}, 
-          scale: {value: 1500.0},
-          Ka: { value: new THREE.Vector3(0.0, 1.0, 1.0) },
-          Kd: { value: new THREE.Vector3(0.0, 1.0, 1.0) },
+          textureAcceleration: {value: null},
+          scale: {value: 1300},
+          //Ka: { value: new THREE.Vector3(0.541, 0.169, 0.886) },
+          //Kd: { value: new THREE.Vector3(0.541, 0.169, 0.886) },
           Ks: { value: new THREE.Vector3(0.8, 0.8, 0.8) },
           LightIntensity: { value: new THREE.Vector4(0.5, 0.5, 0.5, 1.0) },
           LightPosition: { value: new THREE.Vector4(0.0, 1000.0, 0.0, 1.0) },
@@ -242,49 +249,6 @@ if (WEBGL.isWebGLAvailable()) {
     mesh.updateMatrix();
     scene.add(mesh);
   }
-
-
-  /*function initParticles(){
-
-    geometry = new THREE.BufferGeometry();
-
-    console.log(geometry.attributes);
-
-    var vertices = new THREE.BufferAttribute( new Float32Array( nParticles * 3 ), 3 );
-    var references = new THREE.BufferAttribute( new Float32Array( nParticles * 2 ), 2 );
-
-    for (var i=0; i<nParticles; i++){
-        var u = (i % textureDim) / textureDim;
-        var v = ~~(i/textureDim) / textureDim;
-        references.array[i * 2] = u;
-        references.array[i * 2 + 1]=v;
-    }
-
-    geometry.setAttribute('position',vertices);
-    geometry.setAttribute('reference',references);
-
-    console.log(geometry.attributes);
-
-
-    var material = new THREE.ShaderMaterial({
-      uniforms: THREE.UniformsUtils.merge( [
-        THREE.UniformsLib[ 'fog' ], 
-        { texturePosition: {value: null}, 
-          scale: {value: 500.0} }
-      ] ),
-      vertexShader: document.getElementById('physicsVertexShader').textContent,
-      fragmentShader: document.getElementById('pointFragmentShader').textContent,
-      vertexColors: true,
-      fog: true
-    });
-
-    points = new THREE.Points( geometry, material );
-    points.matrixAutoUpdate = false;
-    points.updateMatrix();
-
-    //points.needsUpdate=true;
-    scene.add( points );
-  }*/
 
   function randNormal() {
     var a = 0, b = 0;
@@ -354,6 +318,7 @@ if (WEBGL.isWebGLAvailable()) {
     computeVelocity();
     computePosition();
     computeDensity();
+    //computeDensityMinMax();
     computeAcceleration();
     computeVelocity();
 
@@ -361,6 +326,7 @@ if (WEBGL.isWebGLAvailable()) {
 
     //points.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
     mesh.material.uniforms.texturePosition.value = positionVariable.renderTargets[positionTextureIndex].texture;
+    mesh.material.uniforms.textureAcceleration.value = accelerationVariable.renderTargets[accelerationTextureIndex].texture;
 
     renderer.render(scene, camera);
   }

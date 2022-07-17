@@ -3,9 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="static/styles/main.css">
-    <title>Three.JS-Webpack Boilerplate</title>
+    <title>SPH Three.JS</title>
   </head>
   <body>
     <script type="x-shader/x-vertex" id="physicsVertexShader">
@@ -13,37 +12,33 @@
       attribute vec3 pos_offset;
       
       uniform sampler2D texturePosition;
+      uniform sampler2D textureAcceleration;
       uniform float scale;
       #include <fog_pars_vertex>
 
       varying vec4 vColor;
       varying vec3 modelPos;
       varying vec3 Normal;
+      varying vec3 Ka;
+      varying vec3 Kd;
 
       void main(){
           
           //vec4 tmpPos = scale * texture2D(texturePosition,reference);
           vec4 tmpPos = texture2D(texturePosition,reference);
+          
+          float rho = texture2D(textureAcceleration,reference).a;
 
           float tmpX = scale * tmpPos.x;
           float tmpY = scale * tmpPos.y;
           float tmpZ = scale * tmpPos.z;
 
-          float rho = tmpPos.a;
-
-          //float rho = min( (tmpPos.a - 3.0)/3.0, 1.0 );
-
-          vColor = vec4(0.0,1.0,1.0,1.0);
-
-          float r = (tmpX / scale) + 0.5;
-          float g = (tmpY / scale) + 0.5;
-          float b = (tmpZ / scale) + 0.5;
-          //vColor = vec4(r,g,b,rho);
-          //vColor = vec4(rho,rho,rho,1.0);
+          Ka = vec3(1.0,rho,0.0);
+          Kd = vec3(1.0,rho,0.0);
           
           //gl_Position=projectionMatrix * modelViewMatrix * vec4(tmpX,tmpY,tmpZ,1.0);
           
-          gl_PointSize= 3.0;
+          //gl_PointSize= 3.0;
           
           vec3 transformed = vec3(tmpX,tmpY,tmpZ);
           vec4 mvPosition = vec4( position + transformed, 1.0 );
@@ -63,9 +58,15 @@
     <script type="x-shader/x-fragment" id="pointFragmentShader">
       varying vec3 Normal;
       varying vec3 modelPos;
-      uniform vec3 Ka;
-      uniform vec3 Kd;
+
+      //uniform vec3 Ka;
+      //uniform vec3 Kd;
+
+      varying vec3 Ka;
+      varying vec3 Kd;
+
       uniform vec3 Ks;
+
       uniform vec4 LightPosition;
       uniform vec3 LightIntensity;
       uniform float Shininess;
@@ -145,6 +146,9 @@
 
         float gradientZTest = 0.0;
 
+        float rhoMax = rho;
+        float rhoMin = rho;
+
         for (float y = 0.0; y < height; y++){
           for (float x = 0.0; x < width; x++){
             vec2 ref = vec2( x + 0.5, y + 0.5 ) / resolution.xy;
@@ -153,15 +157,19 @@
             float otherRho = texture2D(textureDensity, ref).x;
             float otherPressure = evaluatePressure(otherRho);
 
+            if (otherRho > rhoMax){
+              rhoMax = otherRho;
+            }
+
+            if (otherRho < rhoMin){
+              rhoMin = otherRho;
+            }
+
             float xDist = selfXPos - otherPosition.x;
             float yDist = selfYPos - otherPosition.y;
             float zDist = selfZPos - otherPosition.z;
 
             gradient = evaluateKernelDerivative(xDist,yDist,zDist);
-
-            /*ax += particleMass * 2.0 * (pressure/(rho*rho)) * gradient.x;
-            ay += particleMass * 2.0 * (pressure/(rho*rho)) * gradient.y;
-            az += particleMass * 2.0 * (pressure/(rho*rho)) * gradient.z;*/
 
             float pressureAcc =  (pressure/(rho*rho)) + (otherPressure/(otherRho*otherRho));
 
@@ -177,8 +185,15 @@
         ay = -ay - lambda * selfYPos - viscosity * tmpVel.y;
         az = -az - lambda * selfZPos - viscosity * tmpVel.z;
 
+        float colorRho = min(15.0, rho);
 
-        gl_FragColor = vec4(ax,ay,az,1.0);
+        //float colorRho = rho;
+        rhoMax = min(15.0, rhoMax);
+
+        colorRho = (colorRho - rhoMin) / (rhoMax - rhoMin);
+
+
+        gl_FragColor = vec4(ax,ay,az,colorRho);
 
       }
     </script>
@@ -260,9 +275,9 @@
 
             otherPosition = texture2D(texturePosition, ref).xyz;
 
-            float xDist = otherPosition.x - selfPos.x;
-            float yDist = otherPosition.y - selfPos.y;
-            float zDist = otherPosition.z - selfPos.z;
+            float xDist = selfPos.x - otherPosition.x;
+            float yDist = selfPos.y - otherPosition.y;
+            float zDist = selfPos.z - otherPosition.z;
 
             rho += particleMass * evaluateKernel(xDist, yDist, zDist);
           }
@@ -274,18 +289,17 @@
     </script>
 
     <!-- Information modal -->
-    <!--a id="open-modal-btn" class="float">
+    <a id="open-modal-btn" class="float">
       <i class="icon-float material-icons">menu</i>
     </a>
     <div id="info-modal" class="modal">
       <div class="modal-content">
         <span class="close-modal-btn">&times;</span>
-        <h3>Welcome to my Three.JS-Webpack boilerplate!</h3>
-        <p>It is a great and easy way to bootstrap Three.Js project.</p>
-        <p>To get started clone the repo <code>git clone https://github.com/aakatev/three-js-webpack.git</code>.</p>
-        <p>For more information, navigate to the <a href="https://github.com/aakatev/three-js-webpack">project GitHub page</a>!</p>
+        <h3>Smoothed particle hydrodynamics example with Three.js</h3>
+        <p>Based on the awesome <a href="https://philip-mocz.medium.com/create-your-own-smoothed-particle-hydrodynamics-simulation-with-python-76e1cec505f1">tutorial</a> by Philip Mocz.</p>
+        <p>Built and deployed rapidly with <a href="https://github.com/aakatev/three-js-webpack">three-js-webpack</a></p>
       </div>
-    </div-->
+    </div>
     <!-- End information modal -->
 
     <script src="public/bundle.js"></script>

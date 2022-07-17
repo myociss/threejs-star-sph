@@ -1,10 +1,11 @@
-# three-js-webpack
+# threejs-star-sph
 
-Starter project for Three.JS. Configured with Webpack 4 as a bundler.
+Smoothed particle hydrodynamics example in Three.js
 
-Great and easy way to bootstrap your Three.JS project.
+## About
 
-## Development
+Simulates the formation of a star based on smoothed particle hydrodynamics based on the 
+tutorial by Philip Mocz https://philip-mocz.medium.com/create-your-own-smoothed-particle-hydrodynamics-simulation-with-python-76e1cec505f1.
 
 Clone the project and install dependencies:
 
